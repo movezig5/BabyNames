@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
 import enums.Gender;
+import file.NameReader;
 import file.NameAnalyzer;
 
 /**********************
@@ -15,19 +16,40 @@ import file.NameAnalyzer;
  * 		model:	A HashMap that maps pattern Strings to another HashMap
  * 				which in turn maps characters to the decimal probability
  * 				that they will follow the pattern string.
+ * 		names:	An array of Strings representing the names read from
+ * 				the names list file
  * 		order:	The order of the Markov model
+ * 		rand:	A Math.Random object used in generating names
  */
 public class MarkovModel {
 	public HashMap<String, HashMap<Character, Float>> model;
+	public String[] names;
 	private int order;
+	private Random rand;
 	
-	// Constructor
-	public MarkovModel(Gender gender, int order)
+	// Default Constructor
+	public MarkovModel()
+	{
+		order = 0;
+	}
+	
+	/**************
+	 * Initialize *
+	 **************
+	 * Creates a new random number generator, initializes the list of names, populates the model,
+	 * percentifies the model, and finally trims the underscores off the names in the list.
+	 * Arguments:
+	 * 		gender:	The enum of the gender of the names
+	 * 		order:	The order of the Markov model
+	 */
+	public void Initialize(Gender gender, int order)
 	{
 		this.order = order;
-		NameAnalyzer na = new NameAnalyzer(gender, order);
-		model = na.PopulateModel();
+		this.rand = new Random(System.currentTimeMillis());
+		this.names = NameReader.Read(gender);
+		this.model = NameAnalyzer.PopulateModel(names, order);
 		Percentify();
+		TrimNames();
 	}
 	
 	/**************
@@ -36,8 +58,6 @@ public class MarkovModel {
 	 * Takes the HashMap obtained from the NameAnalyzer class and converts the number
 	 * of times each character appears to a percent probability that it will
 	 * follow its corresponding pattern string.
-	 * Arguments:		None
-	 * Return values:	None
 	 */
 	private void Percentify()
 	{
@@ -47,47 +67,99 @@ public class MarkovModel {
 		{
 			// The '~', or total quantity, will be the denominator.
 			total = entry.getValue().get('~');
+			entry.getValue().remove('~');
 			for(Map.Entry<Character, Float> entry2 : entry.getValue().entrySet())
 			{
-				// Don't convert the total quantity.
-				if(!entry2.getKey().equals('~'))
-				{
-					// The quantity of each character will be its respective numerator.
-					currNum = entry2.getValue();
-					model.get(entry.getKey()).put(entry2.getKey(), currNum / total);
-				}
+				// The quantity of each character will be its respective numerator.
+				currNum = entry2.getValue();
+				model.get(entry.getKey()).put(entry2.getKey(), currNum / total);
 			}
+		}
+	}
+	
+	/*************
+	 * TrimNames *
+	 *************
+	 * Trims the leading and trailing underscores off the names in the list.
+	 */
+	private void TrimNames()
+	{
+		for(int i = 0; i < names.length; i++)
+		{
+			names[i] = names[i].substring(1, names[i].length() - 1);
 		}
 	}
 	
 	/****************
 	 * GenerateName *
 	 ****************
-	 * Generates a name randomly based on the Markov model.
+	 * Generates a name, checks that it's within the required minimum and maximum lengths,
+	 * then makes sure it isn't already in the list. If the name fails either of these tests,
+	 * the function retries until it gets a valid name.
+	 * Arguments:
+	 * 		minLength: The minimum length of the name
+	 * 		maxLength: The maximum length of the name
+	 * Return value:
+	 * 		A String representing a valid generated name
 	 */
-	public String GenerateName(int length)
+	public String GenerateName(int minLength, int maxLength)
 	{
-		// Initialize the Random object
-		Random rand = new Random(System.currentTimeMillis());
+		String name = "";
+		if(maxLength == 0 || minLength > maxLength)
+			return name;
+		boolean valid = false;
+		while(!valid)
+		{
+			name = GenerateName();
+			
+			if(!(name.length() < minLength || name.length() > maxLength))
+				valid = true;
+			
+			if(valid == true)
+			{
+				for(String s : names)
+				{
+					if(name.equals(s))
+					{
+						valid = false;
+						break;
+					}
+				}
+			}
+		}
+		if(name.length() > 1)
+			name = name.toUpperCase().charAt(0) + name.substring(1);
+		else
+			name = name.toUpperCase();
+		return name;
+	}
+	
+	/****************
+	 * GenerateName *
+	 ****************
+	 * Generates a name randomly based on the Markov model.
+	 * Return value:
+	 * 		A randomly generated name
+	 */
+	private String GenerateName()
+	{
 		String name = "";
 		String currString = "_";
-		// GetNextChar gets the next character in the name
-		char nextChar = GetNextChar(currString, rand);
-		// '_' indicates the current pattern should be followed
-		// by the end of the name
-		while(nextChar != '_' && name.length() < length)
+		char nextChar = GetNextChar(currString);
+		while(nextChar != '_')
 		{
-			// Add the next character to the pattern string and the final name
-			currString += nextChar;
 			name += nextChar;
-			// Make sure the current pattern string is always <= the order
+			currString += nextChar;
 			if(currString.length() > order)
-			{
 				currString = currString.substring(currString.length() - order);
-			}
-			nextChar = GetNextChar(currString, rand);
+			nextChar = GetNextChar(currString);
 		}
 		return name;
+	}
+	
+	public void ReSeedRNG()
+	{
+		rand = new Random(System.currentTimeMillis());
 	}
 	
 	/***************
@@ -104,8 +176,10 @@ public class MarkovModel {
 	 * Arguments:
 	 * 		s:		The pattern string
 	 * 		rand:	A Math.Random object
+	 * Return value:
+	 * 		The next char in the name given the pattern
 	 */
-	public char GetNextChar(String s, Random rand)
+	private char GetNextChar(String s)
 	{
 		float RNG = rand.nextFloat();
 		// The percent starts at zero

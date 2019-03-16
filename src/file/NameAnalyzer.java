@@ -1,13 +1,12 @@
 package file;
 
 import java.util.HashMap;
-import enums.Gender;
 
 /***********************
  * Class: NameAnalyzer *
  ***********************
  * Description:
- * 		A class that iterates over a list of names (given as an array of Strings)
+ * 		A static class that iterates over a list of names (given as an array of Strings)
  * 		and counts the number of times specific characters follow others.
  * Variables:
  * 		gender:	A gender enum
@@ -15,16 +14,6 @@ import enums.Gender;
  * 				the length of the string to get the counts for.
  */
 public class NameAnalyzer {
-	private Gender gender;
-	private int order;
-	
-	// Constructor
-	public NameAnalyzer(Gender gender, int order)
-	{
-		this.gender = gender;
-		this.order = order;
-	}
-	
 	/*****************
 	 * PopulateModel *
 	 *****************
@@ -40,14 +29,13 @@ public class NameAnalyzer {
 	 * a float is the same size as an int.
 	 * 
 	 * Arguments:
-	 * 		None
+	 * 		names:	An array of Strings read in from one of the name list files
+	 * 		order:	The order of the desired Markov model
 	 * Return value:
 	 * 		The completed HashMap
 	 */
-	public HashMap<String, HashMap<Character, Float>> PopulateModel()
+	public static HashMap<String, HashMap<Character, Float>> PopulateModel(String names[], int order)
 	{
-		// Read the list of names into a String array
-		String names[] = NameReader.Read(gender);
 		HashMap<String, HashMap<Character, Float>> counts =
 				new HashMap<String, HashMap<Character, Float>>();
 		String curr;
@@ -92,7 +80,7 @@ public class NameAnalyzer {
 	 * 		next:	The character that follows the pattern String
 	 * 		counts:	The HashMap thus far 
 	 */
-	public void AddCount(String curr, char next, HashMap<String, HashMap<Character, Float>> counts)
+	public static void AddCount(String curr, char next, HashMap<String, HashMap<Character, Float>> counts)
 	{
 		float val;
 		// Check if counts contains the pattern string as a key.
