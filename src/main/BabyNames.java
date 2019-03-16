@@ -27,6 +27,9 @@ public class BabyNames {
 		MarkovModel m = new MarkovModel();
 		LinkedList<String> names = new LinkedList<String>();
 		
+		System.out.println("***********************\n* Baby Name Generator *\n***********************");
+		System.out.println("Welcome to the baby name generator!\nMade by Daniel Ziegler for CSC 480");
+		
 		// The program can generate names repeatedly, unless the user decides to stop
 		while(run)
 		{
